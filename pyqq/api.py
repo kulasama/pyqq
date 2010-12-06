@@ -26,20 +26,27 @@ CB = re.compile(r"^ptuiCB\('(?P<one>\d+)','(?P<two>\d+)','(?P<url>\S+)','(?P<thr
 
 class QQ(object):
     
-	def __init__(self,id,passwd):
+    events = {  
+        'status_change':None,
+        'receive_group_message':None,
+        'receive_message':None,        
+    }
+    
+    def __init__(self,id,passwd):
 		self.id = id
 		self.passwd = passwd
 		self.msg_count = 1
 		self.clientid = get_clientid()  
 		self.logined = False
 	
-	@property
-	def encodepwd(self):
+    @property
+    def encodepwd(self):
 		return pwd_encode(self.passwd,self.verify)
+	                                               
 	
 	
 
-	def _check(self):
+    def _check(self):
 		url = 'http://ptlogin2.qq.com/check'
 		params = {
 		    'uin':self.id,
@@ -52,7 +59,7 @@ class QQ(object):
 		self.verify = match.group('content')
 		return int(match.group('status')),self.verify
 		
-	def _prelogin(self):
+    def _prelogin(self):
 		url = 'http://ptlogin2.qq.com/login'
 		params = {
 			'u':self.id,
@@ -79,7 +86,7 @@ class QQ(object):
 		else:
 			return False
 			
-	def _channel_login(self):
+    def _channel_login(self):
 		url = 'http://web2-b.qq.com/channel/login'
 		self.cookies['notifyNewApp'] = 1
 		self.cookies['pgv_pvid'] = 1935756508
@@ -103,42 +110,47 @@ class QQ(object):
 		else:          
 		    return False 
 		    
-	def login(self): 
+    def login(self): 
 	    self._check()
 	    self._prelogin()
 	    self._channel_login() 
 	    self.logined = True 
 	    time.sleep(1)      
 	
-	def logout(self): 
+    def logout(self): 
 	    logging.info('not implement')
 	
-	def status(self):
+    def status(self):
 	    logging.info('not implement')
 	    return {}
 	    
 	    
-	def send(self,to,msg):
+    def send(self,to,msg):
 	    return self._sendmsg(to,msg) 
 	    
-	def invite(self,to,msg):
+    def invite(self,to,msg):
 	    self._add_need_verify(to,msg)
 	
-	def poll(self,state_callback=None,message_callback=None):   
+    def poll(self):
+        if not self.logined:   
+            raise Exception('qq must be logined') 
+        else:
+            pass 
 	    '''  
 	    buddies_status_changed json:
 	    {'poll_type': 'buddies_status_change', 'value': {'status': 'online', 'client_type': 1, 'uin': 50662227}}
-	    '''
+	    '''  
+
 	    content =  self._channel_poll()  
-	    if content:          
+	    if content:      
 	        for item in content: 
 	            type = item['poll_type']
-	            if type == 'buddies_status_change' and state_callback:
+	            if type == 'buddies_status_change' and self.events.has_key('status_change'):
 	                value = item['value']
 	                status = value['status']
 	                uid = value['uin']
-	                state_callback(uid,status)  
-	            elif type == 'group_message' and message_callback:  
+	                self.events['status_change'](uid,status)
+	            elif type == 'group_message' and self.events.has_key('receive_group_message'):  
 	                qid = item['value']['group_code']
 	                uid = item['value']['send_uin'] 
 	                msgs = []
@@ -146,7 +158,11 @@ class QQ(object):
 	                    if isinstance(row,str) or isinstance(row,unicode):
 	                        msgs.append(row) 
 	                msg = u' '.join(msgs) 
-	                message_callback(qid,uid,msg)
+	                self.events['receive_group_message'](qid,uid,msg)
+	            elif type == 'message' and self.events.has_key('receive_message'):
+	                uid = item['value']['from_uin']
+	                message=item['value']['raw_content']
+	                self.events['receive_message'](uid,message)
 	            else:
 	                logging.debug('unkonwn type <%s>',type) 
    
@@ -159,7 +175,7 @@ class QQ(object):
 	    	    
 		    
 		
-	def _sendmsg(self,to,msg):
+    def _sendmsg(self,to,msg):
 		url = 'http://web2-b.qq.com/channel/send_msg'
 		send = {}
 		send['to']=to
@@ -194,7 +210,7 @@ class QQ(object):
 
 		
 	
-	def _add_need_verify(self,toid,message):
+    def _add_need_verify(self,toid,message):
 	    url = 'http://web2-b.qq.com/api/add_need_verify'   
 	    Headers['Cookie']=getcookiestr(self.cookies)  
 	    params  = {
@@ -208,7 +224,7 @@ class QQ(object):
 	    resp, content = Post(url,body =body,headers=Headers) 
 	    
 	    
-	def _channel_poll(self):
+    def _channel_poll(self):
 	    url = 'http://web2-b.qq.com/channel/poll'  
 	    params = {
 	        'clientid':self.clientid, 
@@ -217,7 +233,6 @@ class QQ(object):
 	    } 
 	    Headers['Cookie']=getcookiestr(self.cookies) 
 	    resp,content = Get(url,params=params,headers=Headers) 
-	    
 	    self.cookies = Cookie(resp.get('set-cookie','')) 
 	    content_dict= json.loads(content)   
 	    if resp['status'] == '200' and content_dict['retcode'] == 0:
@@ -226,7 +241,7 @@ class QQ(object):
 	        logging.error('resp:%s,content:%s',str(resp),content)
 	        return None 
 	
-	def _channel_poll2(self):
+    def _channel_poll2(self):
 	    url = 'http://d.web2.qq.com/channel/poll2'  
 	    params ={
 	        'clientid':self.clientid,
@@ -240,13 +255,13 @@ class QQ(object):
 	    print resp
 	    print content
 	
-	def _get_single_info2(self):
+    def _get_single_info2(self):
 	    pass
   
 	    
 	      
 		
-	def _get_user_friends(self):
+    def _get_user_friends(self):
 		url = 'http://web2-b.qq.com/api/get_user_friends'
 		params={
 		    'h':'hello',
@@ -262,7 +277,7 @@ class QQ(object):
 		    logging.error('resp:%s,content:%s',str(resp),content) 
 		    return None
 	
-	def _get_online_buddies(self):
+    def _get_online_buddies(self):
 	    url = 'http://web2-b.qq.com/channel/get_online_buddies'
 	    params = {
 	        'clientid':self.clientid,
@@ -279,33 +294,41 @@ class QQ(object):
 	        return None 
 	    
 		
-	def get_all_friends(self):
+    def get_all_friends(self):
 	    return self._get_user_friends()   
 	    
-	def get_online_friends(self):
-	    return self._get_online_buddies()
+    def get_online_friends(self):
+	    return self._get_online_buddies() 
+	    
+    def register(self,event,callback):
+	    if self.events.has_key(event):
+	        self.events[event]=callback
+	    else:
+	        raise Exception('no such event')
 		
 		
 
 def state_changed(uid,status):
-   	pass 
+   	print uid,status 
   
-def message_received(qid,uid,msg):
-    pass
+def group_message_received(qid,uid,msg):
+    print qid,uid,msg   
+    
+def message_received(uid,msg):
+    print uid,msg
 		
+
 class QQTestCase(unittest.TestCase):
-	
-		
-	def test_get_check(self):  
-	    qid = None
-	    pwd = None
-		qq = QQ(qid,pwd)
-		qq.login()
-		qq.get_online_friends()
-		qq.get_all_friends()
-		while True:
-		    qq.poll(state_changed,message_received) 
-	
+    
+    def testQQ(self):
+        qq = QQ(1599298566,'helloworld') 
+        qq.login()                       
+        qq.register('status_change',state_changed)
+        qq.register('receive_group_message',message_received)
+        qq.register('receive_message',message_received) 
+        while True:
+            qq.poll()
+            
 
 if __name__ == '__main__':
 	unittest.main()

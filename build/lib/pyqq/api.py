@@ -130,7 +130,7 @@ class QQ(object):
 	    {'poll_type': 'buddies_status_change', 'value': {'status': 'online', 'client_type': 1, 'uin': 50662227}}
 	    '''
 	    content =  self._channel_poll()  
-	    if content:
+	    if content:          
 	        for item in content: 
 	            type = item['poll_type']
 	            if type == 'buddies_status_change' and state_callback:
@@ -224,7 +224,21 @@ class QQ(object):
 	        return content_dict['result']
 	    else:
 	        logging.error('resp:%s,content:%s',str(resp),content)
-	        return None  
+	        return None 
+	
+	def _channel_poll2(self):
+	    url = 'http://d.web2.qq.com/channel/poll2'  
+	    params ={
+	        'clientid':self.clientid,
+	        'psessionid':self.psessionid,
+	        't':int(time.time()),
+	        'vfwebqq':self.vfwebqq
+	    }  
+	    Headers['Cookie'] = getcookiestr(self.cookies)
+	    resp,content = Get(url,params=params,headers=Headers) 
+	    self.cookies=Cookie(resp.get('set-cookie','')) 
+	    print resp
+	    print content
 	
 	def _get_single_info2(self):
 	    pass
@@ -277,24 +291,21 @@ def state_changed(uid,status):
    	pass 
   
 def message_received(qid,uid,msg):
-    print qid,uid,msg
-		
+    pass
 		
 class QQTestCase(unittest.TestCase):
 	
 		
-	def test_get_check(self):
-		qq = QQ(1578799544,'test111111')
-		qq.login()
-		qq.get_online_friends()
-		qq.get_all_friends()
-		#qq.invite(185299715,'test')
-		#qq._add_need_verify(19745233,'test')
-		#qq.send(115645232,'good')
-		
-		while True:
-		    qq.poll(state_changed,message_received)
-	
+	def test_get_check(self):  
+	    qid = None
+	    pwd = None
+        qq = QQ(qid,pwd)
+        qq.login()
+        qq.get_online_friends()
+        qq.get_all_friends()
+        while True:
+            qq.poll(state_changed,message_received) 
+  
 
 if __name__ == '__main__':
 	unittest.main()

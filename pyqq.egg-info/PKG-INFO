@@ -1,10 +1,21 @@
 Metadata-Version: 1.0
 Name: pyqq
-Version: 0.0.2
+Version: 0.0.4
 Summary: nsfocus qq client library
-Home-page: http://www.nsfocus.com
+Home-page: http://github.com/kulasama/pyqq
 Author: kula
 Author-email: kulasama@gmail.com
 License: gpl3
-Description: UNKNOWN
-Platform: UNKNOWN
+Description: 
+                    python qq client library
+                    
+                    example:
+                    from pyqq import QQ
+                    uid = YOUR QQ NUMBER
+                    pwd = YOUR QQ PASSWORD
+                    qq = QQ(uid,pwd)
+                    qq.login()
+                    while True:
+                        qq.poll()
+                
+Platform: any

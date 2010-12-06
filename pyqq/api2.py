@@ -78,7 +78,7 @@ class QQ(object) :
 class QQTestCase(unittest.TestCase):
 
     def test_get_check(self):
-    	qq = QQ(1578799544,'test111111')
+    	qq = QQ(1599298566,'helloworld')
     	qq.login()
        
 

@@ -1,7 +1,7 @@
 from setuptools import setup     
 setup(
         name = 'pyqq',
-        version = '0.0.4',
+        version = '0.0.5',
         description = "nsfocus qq client library", 
         long_description="""
             python qq client library
